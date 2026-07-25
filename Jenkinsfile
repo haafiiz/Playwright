@@ -2,11 +2,10 @@ pipeline {
     agent any
 
     environment {
-        PATH = "/opt/homebrew/bin:${env.PATH}"
+        PATH = "/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin"
     }
 
     stages {
-
         stage('Checkout') {
             steps {
                 checkout scm
@@ -15,34 +14,35 @@ pipeline {
 
         stage('Install Dependencies') {
             steps {
-                sh 'npm ci'
-            }
-        }
-
-        stage('Install Playwright Browsers') {
-            steps {
-                sh 'npx playwright install'
+                sh '''
+                    npm ci
+                    npx playwright install
+                '''
             }
         }
 
         stage('Run Playwright Tests') {
             steps {
-                sh 'npx playwright test'
+                sh '''
+                    rm -rf playwright-report test-results
+                    npx playwright test
+                '''
             }
         }
     }
 
     post {
         always {
+            publishHTML(target: [
+                allowMissing: false,
+                alwaysLinkToLastBuild: true,
+                keepAll: true,
+                reportDir: 'playwright-report',
+                reportFiles: 'index.html',
+                reportName: 'Playwright Report'
+            ])
+
             archiveArtifacts artifacts: 'playwright-report/**', fingerprint: true
-        }
-
-        success {
-            echo 'Playwright tests passed!'
-        }
-
-        failure {
-            echo 'Playwright tests failed!'
         }
     }
 }
