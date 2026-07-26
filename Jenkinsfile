@@ -6,6 +6,21 @@ pipeline {
     }
 
     stages {
+        stage('Git Information') {
+            steps {
+                sh '''
+                    echo "Current Branch:"
+                    git branch
+
+                    echo "Current Commit:"
+                    git rev-parse HEAD
+
+                    echo "Latest Commit:"
+                    git log -1 --oneline
+                '''
+            }
+        }
+
         stage('Checkout') {
             steps {
                 checkout scm
@@ -33,6 +48,7 @@ pipeline {
 
     post {
         always {
+            // Publish Playwright HTML Report
             publishHTML(target: [
                 allowMissing: false,
                 alwaysLinkToLastBuild: true,
@@ -42,7 +58,11 @@ pipeline {
                 reportName: 'Playwright Report'
             ])
 
-            archiveArtifacts artifacts: 'playwright-report/**', fingerprint: true
+            // Publish JUnit Report
+            junit 'test-results/results.xml'
+
+            // Archive reports
+            archiveArtifacts artifacts: 'playwright-report/**, test-results/**', fingerprint: true
         }
     }
 }
